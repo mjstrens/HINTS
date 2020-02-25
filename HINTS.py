@@ -47,7 +47,7 @@ class HINTS:
             current, delta_correction = self.hints(current, level-1, index * self.design[level] + b)
             correction += delta_correction
         # now do composite evaluations AFTER primitive ones, in case primitive ones needed gradients
-        vdiff = (self.fn(current, scenarios, level) - self.fn(state, scenarios, level))/self.Ts[level] # these are cached evaluations, no side effects
+        vdiff = (self.fn(current, scenarios) - self.fn(state, scenarios))/self.Ts[level] # these are cached evaluations, no side effects
         accept = True if always_accept else self.metropolis_accept(vdiff - correction)
         (self.acceptances if accept else self.rejections)[level] += 1
         return((current, vdiff) if accept else (state, 0.0))
@@ -55,9 +55,9 @@ class HINTS:
     # separate out level zero in case we want to override it (e.g. with HMC)
     def primitive_move(self, state, index = 0):
         scenarios = self.scenarios(0, index)
-        v = self.fn(state, scenarios, 0) # could put a gradient into state as a side effect for HMC
+        v = self.fn(state, scenarios) # could put a gradient into state as a side effect for HMC
         current, correction = self.fn.proposal(state, index) # need to pass level 0 scenario [=index] in case proposal depends on scenario
-        v_prime = self.fn(current, scenarios, 0)
+        v_prime = self.fn(current, scenarios)
         vdiff = (v_prime - v)/self.Ts[0] # these are cached evaluations, no side effects
         accept = self.metropolis_accept(vdiff - correction)
         (self.acceptances if accept else self.rejections)[0] += 1
