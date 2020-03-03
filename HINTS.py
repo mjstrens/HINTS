@@ -39,7 +39,7 @@ class HINTS:
         return(True if (exp_diff > 0.0) else (False if (exp_diff < -100.0) else (rand() < math.exp(exp_diff))))
     
     def hints(self, state, level, index = 0, always_accept = False): # main function, requires value of current as input
-        if (level == 0): return(self.primitive_move(state, index)) # this is only separate so we can override
+        if (level == 0): return(self.primitive_move(state, index, always_accept)) # this is only separate so we can override
         scenarios = self.scenarios(level, index)
         correction = 0.0
         current = state # we hold state at all levels in the hierarchy
@@ -53,13 +53,13 @@ class HINTS:
         return((current, vdiff) if accept else (state, 0.0))
     
     # separate out level zero in case we want to override it (e.g. with HMC)
-    def primitive_move(self, state, index = 0):
+    def primitive_move(self, state, index = 0, always_accept = False):
         scenarios = self.scenarios(0, index)
         v = self.fn(state, scenarios) # could put a gradient into state as a side effect for HMC
         current, correction = self.fn.proposal(state, index) # need to pass level 0 scenario [=index] in case proposal depends on scenario
         v_prime = self.fn(current, scenarios)
         vdiff = (v_prime - v)/self.Ts[0] # these are cached evaluations, no side effects
-        accept = self.metropolis_accept(vdiff - correction)
+        accept = True if always_accept else self.metropolis_accept(vdiff - correction)
         (self.acceptances if accept else self.rejections)[0] += 1
         return((current, vdiff) if accept else (state, 0.0))
         
