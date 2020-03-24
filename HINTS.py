@@ -44,11 +44,11 @@ class HINTS:
         correction = 0.0
         current = state # we hold state at all levels in the hierarchy
         for b in range(self.design[level]):
-            current, delta_correction = self.hints(current, level-1, index * self.design[level] + b)
+            current, delta_correction = self.hints(current, level-1, index * self.design[level] + b) # recursive call
             correction += delta_correction
         # now do composite evaluations AFTER primitive ones, in case primitive ones needed gradients
         vdiff = (self.fn(current, scenarios) - self.fn(state, scenarios))/self.Ts[level] # these are cached evaluations, no side effects
-        accept = True if always_accept else self.metropolis_accept(vdiff - correction)
+        accept = True if always_accept else self.metropolis_accept(vdiff - correction) # NB second expression will not be evaluated if always accept
         (self.acceptances if accept else self.rejections)[level] += 1
         return((current, vdiff) if accept else (state, 0.0))
     
