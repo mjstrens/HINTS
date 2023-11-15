@@ -59,6 +59,37 @@ class HashableItem():
     
 # Simple test function: Gaussian with per term bias
 class TestFn(UserFn):
+    def __init__(self, proposal, N, additive = False, gradient_scale = 100.0):
+        self.N = N
+        self.additive = additive
+        self.gscale = gradient_scale
+        super().__init__(proposal)
+        #
+    def sample_initial_state(self):
+        return(randn(1))
+        #
+    def evaluate(self, state, term_index, with_gradient = False):
+        # (this example does not support gradients)
+        # at this point the user should ensure args are Hashable if planning to use lru_cache for repeat calls
+        # we use lru_cache in preference to disk cache when the hashing overhead is important
+        # but prefer diskcache when persistence is needed
+        # can use HashableItem here if passing (say) a big numpy array
+        # e.g. return(cached_eval_fast(HashableItem(state), term_index, self.N, self.additive))
+        return(self.cached_eval_fast(state[0], term_index, self.N, self.additive, self.gscale)) # first arg is now float, so hashable
+    # option to cache at most primitive level
+    @lru_cache(maxsize = 1000000)    
+    def cached_eval_fast(self, x, term_index, N, additive, gscale):
+        self.counter += 1 # lru cache ignores this side effect
+        return(eval_fast(x, term_index, N, additive, gscale))
+
+@jit(nopython=True)
+def eval_fast(x, term_index, N, additive, gradient_scale):
+    noise = float((term_index * 2 + 1) - N)/float(N) # generally we apply variance reduction to noise if possible (essential reparameterisation if cached)
+    v = - 0.5 * x * x + noise * np.sin(x * gradient_scale) # non homogeneous noise
+    return((v/float(N)) if additive else v) # scale factor is to make results comparable for additive (= classify) vs expectation  
+    
+# Another Simple test function: Gaussian with per term bias
+class TestFnSign(UserFn):
     def __init__(self, proposal, N, additive = False):
         self.N = N
         self.additive = additive
@@ -79,12 +110,15 @@ class TestFn(UserFn):
     @lru_cache(maxsize = 1000000)    
     def cached_eval_fast(self, x, term_index, N, additive):
         self.counter += 1 # lru cache ignores this side effect
-        return(eval_fast(x, term_index, N, additive))
+        return(eval_fast_sign(x, term_index, N, additive))
 
 @jit(nopython=True)
-def eval_fast(x, term_index, N, additive):
+def eval_fast_sign(x, term_index, N, additive):
     noise = float((term_index * 2 + 1) - N)/float(N) # generally we apply variance reduction to noise if possible (essential reparameterisation if cached)
-    v = - 0.5 * x * x + noise * np.sin(x) # non homogeneous noise
+    v = - 0.5 * x * x + noise * np.sign(x) # non homogeneous noise
     return((v/float(N)) if additive else v) # scale factor is to make results comparable for additive (= classify) vs expectation  
+
     
+    
+
 
