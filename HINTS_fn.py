@@ -18,7 +18,8 @@ from functools import lru_cache # prefer diskcache because it can memoize unhash
 # cache support at this level has been removed... user should implement
 # this avoids memoizing a class member
 class UserFn:
-    def __init__(self, proposal):
+    def __init__(self, proposal, additive = True):
+        self.additive = additive # user can override
         self.counter = 0 # keeps track of term evaluations
         self.total_counter = 0 # this includes cached ones
         self.proposal = proposal # user provides a proposal function
@@ -61,9 +62,8 @@ class HashableItem():
 class TestFn(UserFn):
     def __init__(self, proposal, N, additive = False, gradient_scale = 100.0):
         self.N = N
-        self.additive = additive
         self.gscale = gradient_scale
-        super().__init__(proposal)
+        super().__init__(proposal, additive)
         #
     def sample_initial_state(self):
         return(randn(1))
@@ -92,8 +92,7 @@ def eval_fast(x, term_index, N, additive, gradient_scale):
 class TestFnSign(UserFn):
     def __init__(self, proposal, N, additive = False):
         self.N = N
-        self.additive = additive
-        super().__init__(proposal)
+        super().__init__(proposal, additive)
         #
     def sample_initial_state(self):
         return(randn(1))
