@@ -47,8 +47,11 @@ class UserFn:
         #            
     def evaluate_regularisation(self, state, with_gradient = False):
         return(0.0) # none by default, user can override        
-
     
+    
+
+
+
 # for caching (now the user's responsibility), either the state is a hashable type
 # or it is a user class instance and the proposal mechanism always makes a dee pcopy
 
@@ -117,7 +120,6 @@ def eval_fast_sign(x, term_index, N, additive):
     v = - 0.5 * x * x + noise * np.sign(x) # non homogeneous noise
     return((v/float(N)) if additive else v) # scale factor is to make results comparable for additive (= classify) vs expectation  
 
-    
-    
+
 
 

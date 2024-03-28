@@ -2,12 +2,15 @@
 import math
 import numpy as np
 from numpy.random import seed, randn, rand, shuffle
+import random
 
 class HINTS:
     # TO DO move langevin out?
-    def __init__(self, args, fn):
+    # Mar 2024: added random shuffle as we go down tree (but not within leaves)
+    def __init__(self, args, fn, shuffle_as_we_go = False):
         self.args = args
         self.fn = fn # user fn
+        self.shuffle_as_we_go = shuffle_as_we_go
         self.levels = args.levels
         self.design = args.design
         self.levels = args.design.shape[0] - 1
@@ -43,7 +46,10 @@ class HINTS:
         scenarios = self.scenarios(level, index)
         correction = 0.0
         current = state # we hold state at all levels in the hierarchy
-        for b in range(self.design[level]):
+        branches = list(range(self.design[level]))
+        if self.shuffle_as_we_go:
+            random.shuffle(branches)
+        for b in branches:
             current, delta_correction = self.hints(current, level-1, index * self.design[level] + b) # recursive call
             correction += delta_correction
         # now do composite evaluations AFTER primitive ones, in case primitive ones needed gradients
