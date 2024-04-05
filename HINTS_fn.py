@@ -2,7 +2,7 @@ from numba import jit
 import math
 import numpy as np
 import time
-from numpy.random import seed, randn, rand, shuffle
+from numpy.random import seed, randn, rand, randint, shuffle
 #from line_profiler import LineProfiler
 
 from functools import lru_cache # prefer diskcache because it can memoize unhashable types

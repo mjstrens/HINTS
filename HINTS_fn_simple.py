@@ -1,5 +1,5 @@
 # version that does not assume higher level evaluations are compositions (sum of logs) of lower level evaluations
-# no caching or reuse
+# no caching or reuse, but the sequence evaluation could be vectorised where there is no serial dependency between datapoints
 
 # fewer dependencies
 import numpy as np
