@@ -16,10 +16,11 @@ class StateT:
         return("Student t state variable: nu = {},  mu = {:.3f}, tau = {:.3f}".format(self.nu, self.mu, self.tau))
 
 
-def proposalT(state, index=0): # index is not used here but the arg must be listed for HINTS
+# sigma must now be bound by TestFnT
+def proposalT(state, index=0, sigma = 1000.0): # index is not used here but the arg must be listed for HINTS
     new_nu = state.nu + randint(-1,+2) # displace by -1, 0 or 1
-    new_mu = state.mu + 0.05 * randn()
-    new_tau = state.tau * np.exp(0.05 * randn()) # random walk on log value    
+    new_mu = state.mu + sigma * randn() # MJAS divided by 4
+    new_tau = state.tau * np.exp(sigma * randn()) # random walk on log value    
     if new_nu == 0: # reflecting barrier at 1 d.o.f.
         new_nu = 2
     return(StateT(new_nu, new_mu, new_tau), 0.0) # construct a new state; symmetrical so Hastings correction (delta) is zero
@@ -29,14 +30,19 @@ def proposalT(state, index=0): # index is not used here but the arg must be list
 
 # version that takes 2D data of size NUM_SCENARIOS x LEAF_SIZE
 class TestFnT(UserFn):
-    def __init__(self, data):
+    def __init__(self, data, proposal_sigma):
         self.N = data.shape[0]
         self.per_lead = data.shape[1]
         self.data = data
-        super().__init__(proposalT)
+        super().__init__(lambda state, index: proposalT(state, index, proposal_sigma)) # bind the sigma
         #
-    def sample_initial_state(self):
-        return(StateT(1, 0.0, 1.0)) # start with fattest distro
+    def sample_initial_state(self, nu, mu, tau, runs = 1):
+        nus = nu + randint(0, 30, runs)
+        # make sure any nu value is at least 1
+        nus = np.where(nus < 1, 1, nus)
+        mus = mu + 0.25 * randn(runs)
+        taus = tau + 0.25 * randn(runs)
+        return([StateT(nus[i], mus[i], taus[i]) for i in range(runs)])
         #
     def evaluate(self, state, term_index, with_gradient = False):
         return(self.cached_eval_fast(state.nu, state.mu, state.tau, term_index))

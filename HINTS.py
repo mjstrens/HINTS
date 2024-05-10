@@ -11,12 +11,16 @@ class HINTS:
         self.args = args
         self.fn = fn # user fn
         self.shuffle_as_we_go = shuffle_as_we_go
+        self.skip_after_accept = args.skip_after_accept
         self.levels = args.levels
         self.design = args.design
         self.levels = args.design.shape[0] - 1
         self.Ts = np.flip(np.array([self.args.T + l * self.args.dT for l in range(args.levels + 1)]))
         self.ns = np.cumprod(args.design) # number of scenarios at each level
         self.N = self.ns[args.levels] 
+        self.downsample = 1
+        if 'downsample' in args:
+            self.downsample = args.downsample
         self.reset()
         # Diagnostics:
         print(self.levels)
@@ -49,9 +53,15 @@ class HINTS:
         branches = list(range(self.design[level]))
         if self.shuffle_as_we_go:
             random.shuffle(branches)
-        for b in branches:
-            current, delta_correction = self.hints(current, level-1, index * self.design[level] + b) # recursive call
-            correction += delta_correction
+        for bi, b in enumerate(branches):
+            if (bi % self.downsample) == 0:
+                current, delta_correction = self.hints(current, level-1, index * self.design[level] + b) # recursive call
+                correction += delta_correction
+                if self.skip_after_accept:
+                    if correction != 0.0:
+                        print("skip back up", bi)
+                        break
+                    
         # now do composite evaluations AFTER primitive ones, in case primitive ones needed gradients
         vdiff = (self.fn(current, scenarios) - self.fn(state, scenarios))/self.Ts[level] # these are cached evaluations, no side effects
         accept = True if always_accept else self.metropolis_accept(vdiff - correction) # NB second expression will not be evaluated if always accept
