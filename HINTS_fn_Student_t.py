@@ -3,6 +3,15 @@
 from HINTS_fn import *
 from scipy.stats import t
 
+try:
+    import torch
+    from torch.distributions import StudentT
+    USE_TORCH = True
+except Exception as e:
+    print("tried loading torch but got exception", e)
+    print("using scipy (slower than torch)")
+    USE_TORCH = False
+
 class StateT:
     def __init__(self, nu, mu = 0.0, tau = 1.0):
         self.nu = nu
@@ -30,11 +39,12 @@ def proposalT(state, index=0, sigma = 1000.0): # index is not used here but the 
 
 # version that takes 2D data of size NUM_SCENARIOS x LEAF_SIZE
 class TestFnT(UserFn):
-    def __init__(self, data, proposal_sigma):
+    def __init__(self, data, proposal_sigma, additive = True):
         self.N = data.shape[0]
-        self.per_lead = data.shape[1]
+        self.per_leaf = data.shape[1]
         self.data = data
-        super().__init__(lambda state, index: proposalT(state, index, proposal_sigma)) # bind the sigma
+        self.additive = additive
+        super().__init__(lambda state, index: proposalT(state, index, proposal_sigma), additive) # bind the sigma
         #
     def sample_initial_state(self, nu, mu, tau, runs = 1):
         nus = nu + randint(0, 30, runs)
@@ -45,9 +55,13 @@ class TestFnT(UserFn):
         return([StateT(nus[i], mus[i], taus[i]) for i in range(runs)])
         #
     def evaluate(self, state, term_index, with_gradient = False):
-        return(self.cached_eval_fast(state.nu, state.mu, state.tau, term_index))
+        ll = self.cached_eval_fast(state.nu, state.mu, state.tau, term_index)
+        return (ll if self.additive else ll * self.N) # NB gets divided thru by the number in the evaluation
         #
     @lru_cache(maxsize = 1000000) 
     def cached_eval_fast(self, nu, mu, tau, term_index):# simple args so caching works through assigned/returned states
-        self.counter += 1
-        return(t(nu, loc = mu, scale = tau).logpdf(self.data[term_index]).sum())
+        self.counter += self.per_leaf
+        if USE_TORCH:
+            return(StudentT(nu, mu, tau).log_prob(torch.Tensor(self.data[term_index])).sum())
+        else:
+            return(t(nu, loc = mu, scale = tau).logpdf(self.data[term_index]).sum())

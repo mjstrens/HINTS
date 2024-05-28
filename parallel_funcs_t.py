@@ -7,7 +7,9 @@ from HINTS_fn_Student_t import *
 def run_t_sampler(args):
     seed(4) # just happens to give us data where MLL nu is actual nu
     data = t.rvs(args.nu, loc = args.mu, scale = args.tau, size =[args.NUM_SCENARIOS, args.LEAF_SIZE])
-    g = TestFnT(data, proposal_sigma = args.proposal_sigma)
+    g = TestFnT(data, proposal_sigma = args.proposal_sigma, additive = args.additive)
+    if not args.additive:
+        print("Using AVERAGER")
     hmc = HINTS(args, g)
     np.random.seed(args.id)
     state  = g.sample_initial_state(1, 1, 1)[0]

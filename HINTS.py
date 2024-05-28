@@ -11,11 +11,17 @@ class HINTS:
         self.args = args
         self.fn = fn # user fn
         self.shuffle_as_we_go = shuffle_as_we_go
-        self.skip_after_accept = args.skip_after_accept
+        if 'skip_after_accept' in args:
+            self.skip_after_accept = args.skip_after_accept
+        else:
+            self.skip_after_accept = False
         self.levels = args.levels
         self.design = args.design
         self.levels = args.design.shape[0] - 1
-        self.Ts = np.flip(np.array([self.args.T + l * self.args.dT for l in range(args.levels + 1)]))
+        if 'Ts' in args:
+            self.Ts = args.Ts
+        else:
+            self.Ts = np.flip(np.array([self.args.T + l * self.args.dT for l in range(args.levels + 1)]))
         self.ns = np.cumprod(args.design) # number of scenarios at each level
         self.N = self.ns[args.levels] 
         self.downsample = 1
